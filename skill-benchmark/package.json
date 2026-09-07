@@ -1,17 +1,20 @@
 {
   "name": "scientific-figure-skill-benchmark",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "engines": {
     "node": ">=22.22.0"
   },
   "scripts": {
+    "fetch:tasks": "python3 scripts/fetch_matplotbench.py",
+    "fetch:kdense": "python3 scripts/fetch_kdense.py",
+    "stage:v0.7": "python3 scripts/stage_v070.py",
     "preflight": "python3 scripts/benchmark_preflight.py",
-    "preflight:static": "python3 scripts/benchmark_preflight.py --allow-missing-scientific --allow-missing-auth",
-    "benchmark:pilot": "promptfoo eval -c promptfooconfig.yaml --repeat 3 --no-cache -o artifacts/pilot-results.json",
+    "benchmark:full": "promptfoo eval -c promptfooconfig.yaml --no-cache -o artifacts/full-results.json",
     "view": "promptfoo view"
   },
   "devDependencies": {
+    "@openai/codex-sdk": "^0.153.2",
     "promptfoo": "0.122.2"
   }
 }
