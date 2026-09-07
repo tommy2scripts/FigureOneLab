@@ -1,0 +1,94 @@
+name: Skill benchmark static verification
+
+on:
+  push:
+    branches:
+      - benchmark/promptfoo-skill-ab
+    paths:
+      - 'skill-benchmark/**'
+      - '.github/workflows/skill-benchmark-static.yml'
+  pull_request:
+    paths:
+      - 'skill-benchmark/**'
+      - '.github/workflows/skill-benchmark-static.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: skill-benchmark/package.json
+
+      - name: Python syntax
+        working-directory: skill-benchmark
+        run: python -m py_compile scripts/*.py
+
+      - name: Parse YAML
+        working-directory: skill-benchmark
+        run: |
+          python -m pip install pyyaml
+          python - <<'PY'
+          import yaml
+          for path in ['promptfooconfig.yaml', 'promptfooconfig.judge.yaml']:
+              with open(path) as f:
+                  yaml.safe_load(f)
+              print(path, 'OK')
+          PY
+
+      - name: Install pinned Promptfoo runtime
+        working-directory: skill-benchmark
+        run: npm install --no-audit --no-fund
+
+      - name: Verify pinned public sources
+        working-directory: skill-benchmark
+        run: |
+          npm run fetch:tasks
+          npm run fetch:kdense
+          test "$(python - <<'PY'
+          import json
+          print(len(json.load(open('benchmark/tasks/matplotbench.json'))))
+          PY
+          )" = "100"
+          grep -q 'version: "1.2"' skill_templates/kdense-v1.2/.agents/skills/scientific-visualization/SKILL.md
+
+      - name: Validate promoted-v0.7 staging contract with synthetic fixture
+        working-directory: skill-benchmark
+        run: |
+          mkdir -p /tmp/v070/{skills/scientific-figure-design,sciplib,scripts,config}
+          printf '%s\n' '---' 'name: scientific-figure-design' 'metadata:' '  version: "0.7.0"' '---' '# synthetic CI fixture' > /tmp/v070/skills/scientific-figure-design/v0.7.0.md
+          printf '' > /tmp/v070/sciplib/__init__.py
+          printf '%s\n' 'def sentinel():' '    return True' > /tmp/v070/sciplib/plot_utils.py
+          printf '%s\n' 'import sys' 'raise SystemExit(0)' > /tmp/v070/scripts/lint_figure_code.py
+          cat > /tmp/v070/config/active_skills.json <<'JSON'
+          {
+            "skills": {
+              "scientific-figure-design": {
+                "champion_version": "v0.7.0",
+                "manifest_path": "scientific-figure-design/v0.7.0.md",
+                "deterministic_modules": ["sciplib.plot_utils"],
+                "static_linters": ["scripts/lint_figure_code.py"],
+                "status": "production",
+                "gate_no_regression": true
+              }
+            }
+          }
+          JSON
+          python scripts/stage_v070.py --source-root /tmp/v070
+          python scripts/benchmark_preflight.py
+
+      - name: Validate Promptfoo generation config
+        working-directory: skill-benchmark
+        run: npx promptfoo validate config -c promptfooconfig.yaml

@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: Blinded scientific and visual judging for MatPlotBench skill benchmark
+
+evaluateOptions:
+  maxConcurrency: 4
+
+prompts:
+  - '{{judge_input}}'
+
+providers:
+  - id: openai:codex-sdk
+    label: blinded-judge
+    config:
+      model: '{{ env.JUDGE_MODEL | default("gpt-5.6-sol") }}'
+      model_reasoning_effort: medium
+      working_dir: '{{judge_workspace}}'
+      skip_git_repo_check: true
+      sandbox_mode: read-only
+      approval_policy: never
+      network_access_enabled: false
+      web_search_enabled: false
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [candidate_1, candidate_2, candidate_3, pairwise_preference, rationale]
+        properties:
+          candidate_1:
+            type: object
+            additionalProperties: false
+            required: [scientific_correctness, task_requirements, visual_quality, critical_error]
+            properties:
+              scientific_correctness: { type: integer, minimum: 0, maximum: 4 }
+              task_requirements: { type: integer, minimum: 0, maximum: 4 }
+              visual_quality: { type: integer, minimum: 0, maximum: 4 }
+              critical_error: { type: boolean }
+          candidate_2:
+            type: object
+            additionalProperties: false
+            required: [scientific_correctness, task_requirements, visual_quality, critical_error]
+            properties:
+              scientific_correctness: { type: integer, minimum: 0, maximum: 4 }
+              task_requirements: { type: integer, minimum: 0, maximum: 4 }
+              visual_quality: { type: integer, minimum: 0, maximum: 4 }
+              critical_error: { type: boolean }
+          candidate_3:
+            type: object
+            additionalProperties: false
+            required: [scientific_correctness, task_requirements, visual_quality, critical_error]
+            properties:
+              scientific_correctness: { type: integer, minimum: 0, maximum: 4 }
+              task_requirements: { type: integer, minimum: 0, maximum: 4 }
+              visual_quality: { type: integer, minimum: 0, maximum: 4 }
+              critical_error: { type: boolean }
+          pairwise_preference:
+            type: string
+            enum: [candidate_1, candidate_2, tie]
+          rationale:
+            type: string
+
+tests:
+  - file://scripts/judge_tests.py:create_tests
+
+defaultTest:
+  assert:
+    - type: is-json
+      metric: judge_schema

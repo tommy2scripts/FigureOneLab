@@ -1,0 +1,114 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: MatPlotBench scientific figure skill benchmark — control vs v0.7.0 vs K-Dense v1.2
+
+evaluateOptions:
+  maxConcurrency: 6
+
+prompts:
+  - |
+      Complete this scientific-figure benchmark task.
+
+      Task ID: {{task_id}}
+      Replicate: {{repeat_id}}
+
+      {{task}}
+
+      Contract:
+      - Preserve all requested data and semantics; do not invent or silently omit observations.
+      - Create `answer.py` containing reproducible Python code.
+      - Execute `answer.py` and create `answer.png` in the current working directory.
+      - Inspect the rendered figure before finishing.
+      - Do not use network access or web search.
+      - Do not read benchmark answer keys, expert instructions, scoring rubrics, or another candidate workspace.
+      - Do not infer journal-specific requirements unless the task states them.
+      - Return only JSON matching the configured schema.
+
+providers:
+  - id: openai:codex-sdk
+    label: candidate-00
+    config:
+      model: '{{ env.CODEX_MODEL | default("gpt-5.6-sol") }}'
+      model_reasoning_effort: medium
+      working_dir: '{{control_workspace}}'
+      skip_git_repo_check: true
+      sandbox_mode: workspace-write
+      approval_policy: never
+      network_access_enabled: false
+      web_search_enabled: false
+      enable_streaming: true
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [task_id, status, script_path, figure_path, verification]
+        properties:
+          task_id: { type: string }
+          status: { type: string, enum: [completed, blocked] }
+          script_path: { type: string }
+          figure_path: { type: string }
+          verification: { type: string }
+
+  - id: openai:codex-sdk
+    label: candidate-01
+    config:
+      model: '{{ env.CODEX_MODEL | default("gpt-5.6-sol") }}'
+      model_reasoning_effort: medium
+      working_dir: '{{scientific_workspace}}'
+      skip_git_repo_check: true
+      sandbox_mode: workspace-write
+      approval_policy: never
+      network_access_enabled: false
+      web_search_enabled: false
+      enable_streaming: true
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [task_id, status, script_path, figure_path, verification]
+        properties:
+          task_id: { type: string }
+          status: { type: string, enum: [completed, blocked] }
+          script_path: { type: string }
+          figure_path: { type: string }
+          verification: { type: string }
+
+  - id: openai:codex-sdk
+    label: candidate-02
+    config:
+      model: '{{ env.CODEX_MODEL | default("gpt-5.6-sol") }}'
+      model_reasoning_effort: medium
+      working_dir: '{{kdense_workspace}}'
+      skip_git_repo_check: true
+      sandbox_mode: workspace-write
+      approval_policy: never
+      network_access_enabled: false
+      web_search_enabled: false
+      enable_streaming: true
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [task_id, status, script_path, figure_path, verification]
+        properties:
+          task_id: { type: string }
+          status: { type: string, enum: [completed, blocked] }
+          script_path: { type: string }
+          figure_path: { type: string }
+          verification: { type: string }
+
+defaultTest:
+  assert:
+    - type: is-json
+      metric: response_schema
+    - type: python
+      value: file://scripts/assert_artifact.py:get_assert
+      metric: deterministic_contract
+      weight: 20
+    - type: python
+      value: file://scripts/assert_routing.py:get_assert
+      metric: routing
+      weight: 3
+
+tests:
+  - path: file://scripts/full_tests.py:create_tests
+    config:
+      max_cases: 100
+      repeats: 3
