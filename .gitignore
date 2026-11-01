@@ -3,3 +3,12 @@
 **/.DS_Store
 .pybiomart.sqlite
 *.gz
+
+# Local benchmark staging and outputs
+skill-benchmark/skill_templates/scientific-v0.7/
+skill-benchmark/skill_templates/kdense-v1.2/
+skill-benchmark/benchmark/tasks/matplotbench.json
+skill-benchmark/benchmark/tasks/PROVENANCE.json
+skill-benchmark/.benchmark_runs/
+skill-benchmark/.blind_judge/
+skill-benchmark/artifacts/

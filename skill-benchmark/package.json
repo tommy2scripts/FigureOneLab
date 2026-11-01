@@ -1,0 +1,24 @@
+{
+  "name": "scientific-figure-skill-benchmark",
+  "version": "0.3.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "fetch:tasks": "python3 scripts/fetch_matplotbench.py",
+    "fetch:kdense": "python3 scripts/fetch_kdense.py",
+    "stage:v0.7": "python3 scripts/stage_v070.py",
+    "preflight": "python3 scripts/benchmark_preflight.py",
+    "benchmark:full": "promptfoo eval -c promptfooconfig.yaml --no-cache -o artifacts/full-results.json",
+    "prepare:judge": "python3 scripts/prepare_blind_judge.py",
+    "benchmark:judge": "promptfoo eval -c promptfooconfig.judge.yaml --no-cache -o artifacts/judge-results.json",
+    "summarize": "python3 scripts/summarize_results.py",
+    "benchmark:all": "npm run preflight && npm run benchmark:full && npm run prepare:judge && npm run benchmark:judge && npm run summarize",
+    "view": "promptfoo view"
+  },
+  "devDependencies": {
+    "@openai/codex-sdk": "^0.153.2",
+    "promptfoo": "0.122.2"
+  }
+}
